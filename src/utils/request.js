@@ -3,20 +3,8 @@ import { userStoreInstance } from '@/stores/';
 import ResponseStatusEnum from "../enums/ResponseStatusEnum";
 import { ElMessage } from "element-plus";
 import {router} from '@/router'
-
-let lastMessageTime = 0;
-const MESSAGE_DELAY = 1000; // 1秒内不重复显示消息
-function showMessage(message, type) {
-  const now = Date.now();
-  if (now - lastMessageTime > MESSAGE_DELAY) {
-    ElMessage({
-      message: message,
-      type: type
-    });
-    lastMessageTime = now;
-  }
-}
-
+import { showMessage } from "./showMessage";
+import MessageTypeEnum from "../enums/messageTypeEnum";
 
 const instant = axios.create({
   baseURL: '/api',
@@ -26,9 +14,10 @@ const instant = axios.create({
 instant.defaults.withCredentials = true;
 // 添加请求拦截器
 instant.interceptors.request.use(function (config) {
-    // 在发送请求之前做些什么
-    if (userStoreInstance.getToken()) {
-        config.headers['Authorization'] = `${userStoreInstance.getToken()}`
+    // 在发送请求之前添加 Authorization 头
+    const token = userStoreInstance.getToken();
+    if (token) {
+        config.headers['Authorization'] = token;
     }
     return config;
   }, function (error) {
@@ -44,7 +33,7 @@ instant.interceptors.response.use(function (response) {
     // 如果说不是成功
     if (res.code !== ResponseStatusEnum.SUCCESS) {
       const message = res.data || ResponseStatusEnum.getCodeText(res);  
-      showMessage(message, 'error');
+      showMessage(message, MessageTypeEnum.ERROR);
     }
     // 过滤掉其他的信息
     return res;
@@ -53,17 +42,20 @@ instant.interceptors.response.use(function (response) {
     // 对响应错误做点什么
     if (error.response) {
       const message = ResponseStatusEnum.getStatusText(error.response);
-      showMessage(message, 'error');
+      showMessage(message, MessageTypeEnum.ERROR);
       if (error.response.status === ResponseStatusEnum.UNAUTHORIZED) {
           // 如果说是401，就要重新跳转到登陆页面
           // 先清除掉token
           userStoreInstance.removeToken();
           router.push('/login');
       }
+    } else if (error.code === "ECONNABORTED") {
+        // 如果说是请求超时
+        showMessage(ResponseStatusEnum.getCodeText({code: ResponseStatusEnum.GATEWAY_TIMEOUT}), MessageTypeEnum.ERROR);
     } else if(error.request){
-      showMessage(`请求出错： ${error.request}`, 'error');
+      showMessage(`请求出错： ${error.request}`, MessageTypeEnum.ERROR);
     } else {
-      showMessage(`请求出错： ${error.request}`, 'error');
+      showMessage(`请求出错： ${error.request}`, MessageTypeEnum.ERROR);
     }
     return Promise.reject(error);
   });

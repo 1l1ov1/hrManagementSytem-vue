@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Login } from '@/api/user'
 import ResponseStatusEnum from '@/enums/ResponseStatusEnum'
 import { userStoreInstance } from '@/stores'
@@ -55,8 +55,20 @@ const login = debounce(async () => {
     }
 }, 300);
 
+const keyListener = (e) => {
+    if (e.key === 'Enter') {
+        login()
+    }
+}
 
+onMounted(() => {
+    document.addEventListener('keydown', keyListener)
+})
 
+// 移除键盘事件监听器
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', keyListener);
+});
 </script>
 
 <template>

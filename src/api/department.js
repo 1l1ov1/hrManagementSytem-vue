@@ -31,3 +31,29 @@ export const getDepartmentsWithEnable= () => {
 export const pageQueryDepartment = (pageDTO) => {
     return request.post('/department/pageQuery', pageDTO)
 }
+
+/**
+ * 删除部门
+ * @param {Array} ids id数组
+ * @returns 返回是否删除成功
+ */
+export const deleteDepartments = (ids) => {
+    return request({
+        url: '/department/delete',
+        method: 'delete',
+        params: {ids}
+    })
+}
+
+/**
+ * 得到部门的详情
+ * @param {Number} id 部门id
+ * @returns 返回一个部门
+ */
+export const getDepartmentDetail = (id) => {
+    return request.get(`/department/getDepartmentDetail/${id}`)
+}
+
+export const updateDepartment = (department) => {
+    return request.put('/department/update', department)
+}

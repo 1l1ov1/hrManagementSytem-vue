@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getDepartmentsWithEnable, createDepartment} from '@/api/department'
+import { getDepartmentsWithEnable, createDepartment, getDepartmentDetail, updateDepartment } from '@/api/department'
 import { userStoreInstance} from '@/stores'
 import ResponseStatusEnum from '@/enums/ResponseStatusEnum'
+import {showMessage} from '@/utils/showMessage'
+import MessageTypeEnum from '@/enums/messageTypeEnum'
 const form = ref({
     id: '',
     departName: '',
@@ -17,9 +19,11 @@ const formRef = ref();
 
 const rules = ref({
     departName: [{ required: true, message: '请输入部门名称', trigger: 'blur' }],
-    description: [{ required: true, message: '请输入部门描述', trigger: 'blur' }]
+    description: [{ required: true, message: '请输入部门描述', trigger: 'blur' }],
+    isEnabled: [{ required: true, message: '请选择启用状态', trigger: 'blur' }],
+    isDeleted: [{ required: true, message: '请选择删除状态', trigger: 'blur' }]
 })
-
+const emit = defineEmits(['refreshData'])
 const options = ref([])
 const getDepartmentListWithEnable = async () => {
     options.value = [];
@@ -32,14 +36,23 @@ const dialogTableVisible = ref(false)
 const title = ref('添加部门')
 /**
  * 打开添加或修改的对话框
- * @param {boolean} isAdd 是否添加
+ * @param {number} departmentId 部门的id
  */
-const openDialog = (isAdd) => {
-    if (isAdd) {
+const openDialog = (departmentId) => {
+    if (!departmentId) {
+        title.value = '添加部门';
         dialogTableVisible.value = true;
     } else {
         title.value = '修改部门';
         dialogTableVisible.value = true;
+        // 然后去获取要修改的部门信息
+        getDepartmentDetail(departmentId).then(res => {
+            // 如果说成功
+            form.value = res.data;
+            form.value.isEnabled = form.value.isEnabled ? 1 : 0;
+            form.value.isDeleted = form.value.isDeleted ? 1 : 0;
+        }).catch(err => {
+        })
     }
 }
 
@@ -62,23 +75,40 @@ const addDepartment = async () => {
     if (res.code === ResponseStatusEnum.SUCCESS) {
         // 如果说添加成功，就关闭对话框，并刷新页面
         dialogTableVisible.value = false;
-        ElMessage({
-            message: '添加成功',
-            type: 'success'
-        })
+        showMessage("添加成功", MessageTypeEnum.SUCCESS)
         // 通知父组件添加成功
-        $emit('refreshData');
+        emit('refreshData');
     } else {
-        ElMessage({
-            message: '添加失败',
-            type: 'error'
-        })
-        form.value = {};
+        showMessage("添加失败", MessageTypeEnum.ERROR)
     }
+    // 然后清空表单
+    resetForm()
 }
 
 const editDepartment = async () => {
+    // 如果说是修改
+    await formRef.value.validate()
+    await updateDepartment(form.value).then(res => {
+        if (res.code === ResponseStatusEnum.SUCCESS) {
+            showMessage('修改成功', MessageTypeEnum.SUCCESS)
+            emit('refreshData');
+        } else {
+            showMessage('修改失败', MessageTypeEnum.ERROR)
+        }
+    }).catch(err => {
+    })
+    dialogTableVisible.value = false;
+    resetForm();
 
+}
+
+const resetForm = () => {
+     // 然后清空表单
+     form.value = {
+        isEnabled: 1,
+        isDeleted: 0,
+        creatorId: userStoreInstance.getUser()?.id
+    };
 }
 
 onMounted(() => {
@@ -86,6 +116,7 @@ onMounted(() => {
 })
 // 使用 defineExpose 暴露 openDialog 函数
 defineExpose({ openDialog });
+
 </script>
 
 <template>
@@ -97,7 +128,7 @@ defineExpose({ openDialog });
             </el-form-item>
             <el-form-item prop="parentName" label="上级部门：">
                 <el-select v-model="form.parentId" placeholder="请选择上级部门">
-                    <el-option v-for="item in options" :key="item.id" :value="item.departName" />
+                    <el-option v-for="item in options" :label="item.departName" :key="item.id" :value="item.id" />
                 </el-select>
             </el-form-item>
             <el-form-item prop="description" label="部门描述：">

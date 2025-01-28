@@ -44,7 +44,11 @@ export const userStore = defineStore('userStore',()=> {
     user.value.token = ''
   }
 
-return {user, setUser,getUser, getToken, removeToken}
+  const clearUser = () => {
+    user.value = {}
+  }
+
+return {user, setUser,getUser, getToken, removeToken, clearUser}
 }, {
   persist: {
     key: 'userInfo', // 存储的键名

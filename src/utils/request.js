@@ -5,7 +5,7 @@ import { ElMessage } from "element-plus";
 import {router} from '@/router'
 import { showMessage } from "./showMessage";
 import MessageTypeEnum from "../enums/messageTypeEnum";
-
+import {Logout} from '@/api/user'
 const instant = axios.create({
   baseURL: '/api',
   timeout: 100000,
@@ -47,6 +47,8 @@ instant.interceptors.response.use(function (response) {
           // 如果说是401，就要重新跳转到登陆页面
           // 先清除掉token
           userStoreInstance.removeToken();
+          // 如果说未授权，先注销
+          Logout(userStoreInstance.getUser().id);
           router.push('/login');
       }
     } else if (error.code === "ECONNABORTED") {

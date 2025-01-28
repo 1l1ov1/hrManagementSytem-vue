@@ -34,27 +34,47 @@ const getDepartmentListWithEnable = async () => {
 
 const dialogTableVisible = ref(false)
 const title = ref('添加部门')
+const isDisabled = ref(false)
 /**
  * 打开添加或修改的对话框
  * @param {number} departmentId 部门的id
+ * @param {string} mode 打开模式，add 或者 edit 或者view
  */
-const openDialog = (departmentId) => {
-    if (!departmentId) {
-        title.value = '添加部门';
+const openDialog = (departmentId, mode) => {
+    getDepartmentListWithEnable();
+    const setTitle = (titleText) => {
+        title.value = titleText;
         dialogTableVisible.value = true;
-    } else {
-        title.value = '修改部门';
-        dialogTableVisible.value = true;
-        // 然后去获取要修改的部门信息
+        isDisabled.value = titleText === '查看部门' ? true : false;
+    };
+
+    const fetchAndSetForm = (departmentId) => {
+        if (!departmentId) {
+            console.error('Invalid departmentId');
+            return;
+        }
+
         getDepartmentDetail(departmentId).then(res => {
-            // 如果说成功
             form.value = res.data;
-            form.value.isEnabled = form.value.isEnabled ? 1 : 0;
-            form.value.isDeleted = form.value.isDeleted ? 1 : 0;
+            form.value.isEnabled = convertBooleanToInt(form.value.isEnabled);
+            form.value.isDeleted = convertBooleanToInt(form.value.isDeleted);
         }).catch(err => {
-        })
+            console.error('Failed to fetch department detail:', err);
+            // 显示错误信息给用户或其他处理方式
+        });
+    };
+
+    const convertBooleanToInt = (boolValue) => boolValue ? 1 : 0;
+
+    if (mode === 'add') {
+        setTitle('添加部门');
+    } else if (mode === 'edit' || mode === 'view') {
+        setTitle(mode === 'edit' ? '修改部门' : '查看部门');
+        fetchAndSetForm(departmentId);
+    } else {
+        console.warn('Unknown mode:', mode);
     }
-}
+};
 
 const clickedBtn = (id) => {
     if (!id) {
@@ -124,25 +144,25 @@ defineExpose({ openDialog });
     <el-dialog v-model="dialogTableVisible" :title="title" width="500">
         <el-form :rules="rules" ref="formRef" :model="form" label-width="100px">
             <el-form-item prop="departName" label="部门名称：">
-                <el-input v-model="form.departName" placeholder="请输入部门名称" />
+                <el-input v-model="form.departName" placeholder="请输入部门名称" :disabled="isDisabled" />
             </el-form-item>
             <el-form-item prop="parentName" label="上级部门：">
-                <el-select v-model="form.parentId" placeholder="请选择上级部门">
+                <el-select v-model="form.parentId" placeholder="请选择上级部门" :disabled="isDisabled">
                     <el-option v-for="item in options" :label="item.departName" :key="item.id" :value="item.id" />
                 </el-select>
             </el-form-item>
             <el-form-item prop="description" label="部门描述：">
                 <el-input v-model="form.description" type="textarea"  maxlength="40"  show-word-limit
-                    placeholder="请输入部门描述" />
+                    placeholder="请输入部门描述" :disabled="isDisabled"/>
             </el-form-item>
             <el-form-item prop="isEnabled" label="启用状态：">
-                <el-select v-model="form.isEnabled" placeholder="请选择启用状态">
+                <el-select v-model="form.isEnabled" placeholder="请选择启用状态" :disabled="isDisabled">
                     <el-option label="启用" :value="1">启用</el-option>
                     <el-option label="禁用" :value="0">禁用</el-option>
                 </el-select>
             </el-form-item>
             <el-form-item prop="isDeleted" label="删除状态：">
-                <el-select v-model="form.isDeleted" placeholder="请选择删除状态">
+                <el-select v-model="form.isDeleted" placeholder="请选择删除状态" :disabled="isDisabled">
                     <el-option label="未删除" :value="0">未删除</el-option>
                     <el-option label="已删除" :value="1">已删除</el-option>
                 </el-select>

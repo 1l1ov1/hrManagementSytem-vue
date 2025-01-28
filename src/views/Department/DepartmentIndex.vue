@@ -14,8 +14,8 @@ const searchFields = ref([]);
  * 判断是添加还是修改，打开对话框
  * @param {number} departmentId 有值就是修改 无值就是添加
  */
-const openDepartmentDialog = (departmentId) => {
-    AddOrEditDepartmentRef.value.openDialog(departmentId);
+const openDepartmentDialog = (departmentId, mode) => {
+    AddOrEditDepartmentRef.value.openDialog(departmentId, mode);
 }
 const selectedItemIds = ref([]);
 /**
@@ -102,10 +102,23 @@ const editDepartment = () => {
     }
 
     // 否则就去修改
-    openDepartmentDialog(selectedItemIds.value[0]);
+    openDepartmentDialog(selectedItemIds.value[0], "edit");
 }
 
-const detailDepartment = () => {
+const detailDepartment = (departmentId) => {
+    if (departmentId === null) {
+        // 说明是勾选
+        if (selectedItemIds.value.length === 0) {
+            showMessage("请选择要查看的部门", MessageTypeEnum.WARNING)
+            return;
+        } else if (selectedItemIds.value.length > 1) {
+            showMessage("只能选择一个部门进行查看", MessageTypeEnum.WARNING)
+            return;
+        }
+        openDepartmentDialog(selectedItemIds.value[0], "view");
+    } else {
+        openDepartmentDialog(departmentId, "view");
+    }
 }
 const loading = ref(false);
 const pageDTO = ref({
@@ -181,10 +194,10 @@ onMounted(() => {
     <SearchInfoComponent :fields="searchFields" />
 
     <el-row :span="12" class="btn-group">
-        <el-button type="primary" @click="openDepartmentDialog(null)">添加</el-button>
+        <el-button type="primary" @click="openDepartmentDialog(null, 'add')">添加</el-button>
         <el-button type="warning" @click="editDepartment">修改</el-button>
         <el-button type="danger" @click="deleteDepartmentMul">删除</el-button>
-        <el-button type="info" @click="detailDepartment">查看</el-button>
+        <el-button type="info" @click="detailDepartment(null, 'view')">查看</el-button>
     </el-row>
     <el-table :data="departmentList" style="width: 100%" row-key="id" lazy
     v-loading="loading"
@@ -217,7 +230,10 @@ onMounted(() => {
                 <el-button link type="danger" size="large" @click="deleteDepartmentOne(scope.row.id)">
                     删除
                 </el-button>
-                <el-button link type="primary" size="large" @click="openDepartmentDialog(scope.row.id)">编辑</el-button>          
+                <el-button link type="info" size="large" @click="detailDepartment(scope.row.id)">
+                    查看
+                </el-button>
+                <el-button link type="primary" size="large" @click="openDepartmentDialog(scope.row.id, 'edit')">编辑</el-button>          
             </template>
         </el-table-column>
     </el-table>
